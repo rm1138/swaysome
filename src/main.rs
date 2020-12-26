@@ -7,8 +7,9 @@ use std::io::{Read, Write};
 use std::process::exit;
 use std::os::unix::net::UnixStream;
 use std::mem;
+use std::io::Cursor;
 
-use byteorder::{WriteBytesExt, LittleEndian};
+use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 
 
 fn get_stream() -> UnixStream {
@@ -56,6 +57,33 @@ fn send_msg(mut stream: &UnixStream, msg_type: u32, payload: &str) {
 }
 
 
+fn read_msg(mut stream: &UnixStream) -> Result<String, &str> {
+    let mut response_header: [u8; 14] = *b"uninitialized.";
+    stream.read_exact(&mut response_header).unwrap();
+
+    if &response_header[0..6] == b"i3-ipc" {
+        // let l: [u8; 14] = response_header[6..10];
+        let mut v = Cursor::new(vec!(response_header[6], response_header[7], response_header[8], response_header[9]));
+        // let mut v = Cursor::new(vec!(response_header[6..10]));
+        let payload_length = v.read_u32::<LittleEndian>().unwrap();
+        // payload_length = response_header[6..10].read_u32::<LittleEndian>().unwrap();
+        println!("This is a valid i3 packet of length: {}", payload_length);
+
+        let mut payload = vec![0; payload_length as usize];
+        stream.read_exact(&mut payload[..]).unwrap();
+        let payload_str = String::from_utf8(payload).unwrap();
+        println!("Payload: {}", payload_str);
+        Ok(payload_str)
+    } else {
+        print!("Not an i3-icp packet, emptying the buffer: ");
+        let mut v = vec!();
+        stream.read_to_end(&mut v).unwrap();
+        println!("{:?}", v);
+        Err("Unable to read i3-ipc packet")
+    }
+}
+
+
 fn main() {
     // `args` returns the arguments passed to the program
     let args: Vec<String> = env::args().map(|x| x.to_string())
@@ -63,13 +91,8 @@ fn main() {
 
     let mut stream = get_stream();
 
-    // stream.set_nonblocking(true).expect("could not set non blocking");
-
     send_msg(&stream, 1, "");
 
-    let mut response_header: [u8; 14] = *b"..............";
-    // let mut response = vec!();
-    stream.read_exact(&mut response_header);
-    // stream.read_to_string(&mut response);
-    println!("answer: {:x?}", response_header);
+    read_msg(&stream);
+
 }
