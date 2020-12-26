@@ -1,5 +1,7 @@
 // client.rs
 extern crate byteorder;
+extern crate serde;
+extern crate serde_json;
 
 use std::env;
 use std::path::Path;
@@ -9,7 +11,54 @@ use std::os::unix::net::UnixStream;
 use std::mem;
 use std::io::Cursor;
 
+use serde::{Deserialize, Serialize};
+
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
+
+const RUN_COMMAND: u32 = 0;
+const GET_WORKSPACES: u32 = 1;
+const SUBSCRIBE: u32 = 2;
+const GET_OUTPUTS: u32 = 3;
+
+#[derive(Serialize, Deserialize)]
+struct WorkspaceRect {
+    x: usize,
+    y: usize,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Workspace {
+    num: usize,
+    name: String,
+    visible: bool,
+    focused: bool,
+    rect: WorkspaceRect,
+    output: String,
+}
+
+#[derive(Serialize, Deserialize)]
+struct OutputMode {
+    width: usize,
+    height: usize,
+    refresh: usize,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Output {
+    name: String,
+    make: String,
+    model: String,
+    serial: String,
+    active: bool,
+    primary: bool,
+    focused: bool,
+    scale: f32,
+    subpixel_hinting: String,
+    transform: String,
+    current_workspace: String,
+    modes: Vec<OutputMode>,
+    current_mode: OutputMode,
+}
 
 
 fn get_stream() -> UnixStream {
@@ -37,20 +86,23 @@ fn send_msg(mut stream: &UnixStream, msg_type: u32, payload: &str) {
     // let magic = b"i3-ipc";
 
     // let mut msg = b"i3-ipc".to_vec();
-    let mut msg: [u8; 6 * mem::size_of::<u8>() + 2 * mem::size_of::<u32>()] = *b"i3-ipc00000000";
+    let mut msg_prefix: [u8; 6 * mem::size_of::<u8>() + 2 * mem::size_of::<u32>()] = *b"i3-ipc00000000";
 
-    msg[6..].as_mut()
+    msg_prefix[6..].as_mut()
         .write_u32::<LittleEndian>(payload_length)
         .expect("Unable to write");
 
-    msg[10..].as_mut()
+    msg_prefix[10..].as_mut()
         .write_u32::<LittleEndian>(msg_type)
         .expect("Unable to write");
 
-    // let msg = format!("{}{}{}{}", magic, pl_t, pl_l, payload);
-    println!("msg: {:x?}", msg);
+    // let msg_prefix = format!("{}{}{}{}", magic, pl_t, pl_l, payload);
+    println!("msg_prefix: {:x?}", msg_prefix);
 
-    match stream.write_all(&msg) {
+    let mut msg: Vec<u8> = msg_prefix[..].to_vec();
+    msg.extend(payload.as_bytes());
+
+    match stream.write_all(&msg[..]) {
         Err(_) => panic!("couldn't send message"),
         Ok(_) => {}
     }
@@ -83,6 +135,64 @@ fn read_msg(mut stream: &UnixStream) -> Result<String, &str> {
     }
 }
 
+fn get_current_output_name(stream: &UnixStream) -> String {
+    send_msg(&stream, GET_OUTPUTS, "");
+    let o = match read_msg(&stream) {
+        Ok(msg) => msg,
+        Err(_) => panic!("Unable to get current workspace"),
+    };
+    let outputs: Vec<Output> = serde_json::from_str(&o).unwrap();
+
+    let focused_output_index = match outputs.iter().position(|x| x.focused) {
+        Some(i) => i,
+        None => panic!("WTF! No focused output???"),
+    };
+
+    // outputs[focused_output_index].name.clone()
+    format!("{}", focused_output_index)
+}
+
+fn get_current_workspace_name(stream: &UnixStream) -> String {
+    send_msg(&stream, GET_WORKSPACES, "");
+    let ws = match read_msg(&stream) {
+        Ok(msg) => msg,
+        Err(_) => panic!("Unable to get current workspace"),
+    };
+    let workspaces: Vec<Workspace> = serde_json::from_str(&ws).unwrap();
+
+    let focused_workspace_index = match workspaces.iter().position(|x| x.focused) {
+        Some(i) => i,
+        None => panic!("WTF! No focused workspace???"),
+    };
+
+    workspaces[focused_workspace_index].name.clone()
+}
+
+fn move_container_to_workspace(stream: &UnixStream, workspace_name: &String) {
+    let mut cmd: String = "move container to workspace ".to_string();
+    let output = get_current_output_name(stream);
+    cmd.push_str(&output);
+    cmd.push_str(&workspace_name);
+    println!("Sending command: '{}'", &cmd);
+    send_msg(&stream, RUN_COMMAND, &cmd);
+    match read_msg(&stream) {
+        Ok(msg) => println!("msg: {}", msg),
+        Err(_) => panic!("Unable to get current workspace"),
+    };
+}
+
+fn focus_to_workspace(stream: &UnixStream, workspace_name: &String) {
+    let mut cmd: String = "workspace ".to_string();
+    let output = get_current_output_name(stream);
+    cmd.push_str(&output);
+    cmd.push_str(&workspace_name);
+    println!("Sending command: '{}'", &cmd);
+    send_msg(&stream, RUN_COMMAND, &cmd);
+    match read_msg(&stream) {
+        Ok(msg) => println!("msg: {}", msg),
+        Err(_) => panic!("Unable to get current workspace"),
+    };
+}
 
 fn main() {
     // `args` returns the arguments passed to the program
@@ -91,8 +201,17 @@ fn main() {
 
     let mut stream = get_stream();
 
-    send_msg(&stream, 1, "");
+    println!("Current workspace name: {}", get_current_workspace_name(&mut stream));
 
-    read_msg(&stream);
+    send_msg(&stream, 3, "");
+    match read_msg(&stream) {
+        Ok(msg) => println!("outputs: {}", msg),
+        Err(_) => panic!("Unable to get current workspace"),
+    };
 
+    match args[1].as_str() {
+        "move" => move_container_to_workspace(&stream, &args[2]),
+        "focus" => focus_to_workspace(&stream, &args[2]),
+        _ => {},
+    }
 }
