@@ -129,6 +129,19 @@ fn read_msg(mut stream: &UnixStream) -> Result<String, &str> {
     }
 }
 
+fn check_success(stream: &UnixStream) {
+    match read_msg(&stream) {
+        Ok(msg) => {
+            let r: Vec<serde_json::Value> = serde_json::from_str(&msg).unwrap();
+            match r[0]["success"] {
+                serde_json::Value::Bool(true) => println!("Command successful"),
+                _ => panic!("Command failed: {:#?}", r),
+            }
+        },
+        Err(_) => panic!("Unable to read response"),
+    };
+}
+
 fn get_current_output_name(stream: &UnixStream) -> String {
     send_msg(&stream, GET_OUTPUTS, "");
     let o = match read_msg(&stream) {
@@ -169,10 +182,7 @@ fn move_container_to_workspace(stream: &UnixStream, workspace_name: &String) {
     cmd.push_str(&workspace_name);
     println!("Sending command: '{}'", &cmd);
     send_msg(&stream, RUN_COMMAND, &cmd);
-    match read_msg(&stream) {
-        Ok(msg) => println!("msg: {}", msg),
-        Err(_) => panic!("Unable to get current workspace"),
-    };
+    check_success(&stream);
 }
 
 fn focus_to_workspace(stream: &UnixStream, workspace_name: &String) {
@@ -182,10 +192,7 @@ fn focus_to_workspace(stream: &UnixStream, workspace_name: &String) {
     cmd.push_str(&workspace_name);
     println!("Sending command: '{}'", &cmd);
     send_msg(&stream, RUN_COMMAND, &cmd);
-    match read_msg(&stream) {
-        Ok(msg) => println!("msg: {}", msg),
-        Err(_) => panic!("Unable to get current workspace"),
-    };
+    check_success(&stream);
 }
 
 fn main() {
