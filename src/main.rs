@@ -195,6 +195,25 @@ fn focus_to_workspace(stream: &UnixStream, workspace_name: &String) {
     check_success(&stream);
 }
 
+fn init_workspaces(stream: &UnixStream) {
+    send_msg(&stream, GET_OUTPUTS, "");
+    let o = match read_msg(&stream) {
+        Ok(msg) => msg,
+        Err(_) => panic!("Unable to get outputs"),
+    };
+    let outputs: Vec<Output> = serde_json::from_str(&o).unwrap();
+
+    let cmd_prefix: String = "focus output ".to_string();
+    for output in outputs.iter().rev() {
+        let mut cmd = cmd_prefix.clone();
+        cmd.push_str(&output.name);
+        println!("Sending command: '{}'", &cmd);
+        send_msg(&stream, RUN_COMMAND, &cmd);
+        check_success(&stream);
+        focus_to_workspace(&stream, &"1".to_string());
+    }
+}
+
 fn main() {
     // `args` returns the arguments passed to the program
     let args: Vec<String> = env::args().map(|x| x.to_string())
@@ -203,6 +222,7 @@ fn main() {
     let mut stream = get_stream();
 
     match args[1].as_str() {
+        "init" => init_workspaces(&stream),
         "move" => move_container_to_workspace(&stream, &args[2]),
         "focus" => focus_to_workspace(&stream, &args[2]),
         _ => {},
