@@ -16,9 +16,19 @@ cd swaysome
 cargo install --path .
 ```
 
-Then put something like the following in your `sway` configuration:
+Then create the file (and the directory if needed) "~/.config/sway/config.d/swaysome.conf" and paste this inside:
 ```
 # Change focus between workspaces
+unbindsym $mod+1
+unbindsym $mod+2
+unbindsym $mod+3
+unbindsym $mod+4
+unbindsym $mod+5
+unbindsym $mod+6
+unbindsym $mod+7
+unbindsym $mod+8
+unbindsym $mod+9
+unbindsym $mod+0
 bindsym $mod+1 exec "swaysome focus 1"
 bindsym $mod+2 exec "swaysome focus 2"
 bindsym $mod+3 exec "swaysome focus 3"
@@ -31,6 +41,16 @@ bindsym $mod+9 exec "swaysome focus 9"
 bindsym $mod+0 exec "swaysome focus 0"
 
 # Move containers between workspaces
+unbindsym $mod+Shift+1
+unbindsym $mod+Shift+2
+unbindsym $mod+Shift+3
+unbindsym $mod+Shift+4
+unbindsym $mod+Shift+5
+unbindsym $mod+Shift+6
+unbindsym $mod+Shift+7
+unbindsym $mod+Shift+8
+unbindsym $mod+Shift+9
+unbindsym $mod+Shift+0
 bindsym $mod+Shift+1 exec "swaysome move 1"
 bindsym $mod+Shift+2 exec "swaysome move 2"
 bindsym $mod+Shift+3 exec "swaysome move 3"
@@ -44,6 +64,11 @@ bindsym $mod+Shift+0 exec "swaysome move 0"
 
 # Init workspaces for every screen
 exec "swaysome init"
+```
+
+Finally append your `sway` configuration with this:
+```
+include ~/.config/sway/config.d/*.conf
 ```
 
 You should end-up with workspaces from `1` to `0`, prefixed with a screen index,
