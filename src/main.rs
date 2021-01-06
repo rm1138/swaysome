@@ -83,9 +83,6 @@ fn get_stream() -> UnixStream {
 fn send_msg(mut stream: &UnixStream, msg_type: u32, payload: &str) {
     let payload_length = payload.len() as u32;
 
-    // let magic = b"i3-ipc";
-
-    // let mut msg = b"i3-ipc".to_vec();
     let mut msg_prefix: [u8; 6 * mem::size_of::<u8>() + 2 * mem::size_of::<u32>()] = *b"i3-ipc00000000";
 
     msg_prefix[6..].as_mut()
@@ -95,9 +92,6 @@ fn send_msg(mut stream: &UnixStream, msg_type: u32, payload: &str) {
     msg_prefix[10..].as_mut()
         .write_u32::<LittleEndian>(msg_type)
         .expect("Unable to write");
-
-    // let msg_prefix = format!("{}{}{}{}", magic, pl_t, pl_l, payload);
-    println!("msg_prefix: {:x?}", msg_prefix);
 
     let mut msg: Vec<u8> = msg_prefix[..].to_vec();
     msg.extend(payload.as_bytes());
@@ -200,14 +194,6 @@ fn main() {
                                        .collect();
 
     let mut stream = get_stream();
-
-    println!("Current workspace name: {}", get_current_workspace_name(&mut stream));
-
-    send_msg(&stream, 3, "");
-    match read_msg(&stream) {
-        Ok(msg) => println!("outputs: {}", msg),
-        Err(_) => panic!("Unable to get current workspace"),
-    };
 
     match args[1].as_str() {
         "move" => move_container_to_workspace(&stream, &args[2]),
