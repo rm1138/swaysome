@@ -20,12 +20,14 @@ const GET_WORKSPACES: u32 = 1;
 const SUBSCRIBE: u32 = 2;
 const GET_OUTPUTS: u32 = 3;
 
+#[derive(Debug)]
 #[derive(Serialize, Deserialize)]
 struct WorkspaceRect {
     x: usize,
     y: usize,
 }
 
+#[derive(Debug)]
 #[derive(Serialize, Deserialize)]
 struct Workspace {
     num: usize,
@@ -36,6 +38,7 @@ struct Workspace {
     output: String,
 }
 
+#[derive(Debug)]
 #[derive(Serialize, Deserialize)]
 struct OutputMode {
     width: usize,
@@ -43,6 +46,7 @@ struct OutputMode {
     refresh: usize,
 }
 
+#[derive(Debug)]
 #[derive(Serialize, Deserialize)]
 struct Output {
     name: String,
