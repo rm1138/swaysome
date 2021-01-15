@@ -175,17 +175,6 @@ fn get_current_output_name(stream: &UnixStream) -> String {
     format!("{}", focused_output_index)
 }
 
-fn get_current_workspace_name(stream: &UnixStream) -> String {
-    let workspaces = get_workspaces(&stream);
-
-    let focused_workspace_index = match workspaces.iter().position(|x| x.focused) {
-        Some(i) => i,
-        None => panic!("WTF! No focused workspace???"),
-    };
-
-    workspaces[focused_workspace_index].name.clone()
-}
-
 fn move_container_to_workspace(stream: &UnixStream, workspace_name: &String) {
     let mut cmd: String = "move container to workspace ".to_string();
     let output = get_current_output_name(stream);
