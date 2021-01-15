@@ -146,20 +146,23 @@ fn check_success(stream: &UnixStream) {
     };
 }
 
-fn get_current_output_name(stream: &UnixStream) -> String {
+fn get_outputs(stream: &UnixStream) -> Vec<Output> {
     send_msg(&stream, GET_OUTPUTS, "");
     let o = match read_msg(&stream) {
         Ok(msg) => msg,
-        Err(_) => panic!("Unable to get current workspace"),
+        Err(_) => panic!("Unable to get outputs"),
     };
-    let outputs: Vec<Output> = serde_json::from_str(&o).unwrap();
+    serde_json::from_str(&o).unwrap()
+}
+
+fn get_current_output_name(stream: &UnixStream) -> String {
+    let outputs = get_outputs(&stream);
 
     let focused_output_index = match outputs.iter().position(|x| x.focused) {
         Some(i) => i,
         None => panic!("WTF! No focused output???"),
     };
 
-    // outputs[focused_output_index].name.clone()
     format!("{}", focused_output_index)
 }
 
@@ -200,12 +203,7 @@ fn focus_to_workspace(stream: &UnixStream, workspace_name: &String) {
 }
 
 fn init_workspaces(stream: &UnixStream) {
-    send_msg(&stream, GET_OUTPUTS, "");
-    let o = match read_msg(&stream) {
-        Ok(msg) => msg,
-        Err(_) => panic!("Unable to get outputs"),
-    };
-    let outputs: Vec<Output> = serde_json::from_str(&o).unwrap();
+    let outputs = get_outputs(&stream);
 
     let cmd_prefix: String = "focus output ".to_string();
     for output in outputs.iter().rev() {
