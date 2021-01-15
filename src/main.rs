@@ -155,6 +155,15 @@ fn get_outputs(stream: &UnixStream) -> Vec<Output> {
     serde_json::from_str(&o).unwrap()
 }
 
+fn get_workspaces(stream: &UnixStream) -> Vec<Workspace> {
+    send_msg(&stream, GET_WORKSPACES, "");
+    let ws = match read_msg(&stream) {
+        Ok(msg) => msg,
+        Err(_) => panic!("Unable to get current workspace"),
+    };
+    serde_json::from_str(&ws).unwrap()
+}
+
 fn get_current_output_name(stream: &UnixStream) -> String {
     let outputs = get_outputs(&stream);
 
@@ -167,12 +176,7 @@ fn get_current_output_name(stream: &UnixStream) -> String {
 }
 
 fn get_current_workspace_name(stream: &UnixStream) -> String {
-    send_msg(&stream, GET_WORKSPACES, "");
-    let ws = match read_msg(&stream) {
-        Ok(msg) => msg,
-        Err(_) => panic!("Unable to get current workspace"),
-    };
-    let workspaces: Vec<Workspace> = serde_json::from_str(&ws).unwrap();
+    let workspaces = get_workspaces(&stream);
 
     let focused_workspace_index = match workspaces.iter().position(|x| x.focused) {
         Some(i) => i,
