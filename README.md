@@ -62,6 +62,12 @@ bindsym $mod+Shift+8 exec "swaysome move 8"
 bindsym $mod+Shift+9 exec "swaysome move 9"
 bindsym $mod+Shift+0 exec "swaysome move 0"
 
+# Move focused container to next output
+bindsym $mod+o exec "swaysome next_output"
+
+# Move focused container to previous output
+bindsym $mod+Shift+o exec "swaysome prev_output"
+
 # Init workspaces for every screen
 exec "swaysome init"
 ```

@@ -195,6 +195,46 @@ fn focus_to_workspace(stream: &UnixStream, workspace_name: &String) {
     check_success(&stream);
 }
 
+fn move_container_to_next_output(stream: &UnixStream) {
+    move_container_to_next_or_prev_output(&stream, false);
+}
+
+fn move_container_to_prev_output(stream: &UnixStream) {
+    move_container_to_next_or_prev_output(&stream, true);
+}
+
+fn move_container_to_next_or_prev_output(stream: &UnixStream, go_to_prev: bool) {
+    let outputs = get_outputs(&stream);
+    let focused_output_index = match outputs.iter().position(|x| x.focused) {
+        Some(i) => i,
+        None => panic!("WTF! No focused output???"),
+    };
+
+    let target_output;
+    if go_to_prev {
+        target_output = &outputs[(focused_output_index - 1 + &outputs.len()) % &outputs.len()];
+    } else {
+        target_output = &outputs[(focused_output_index + 1) % &outputs.len()];
+    }
+
+    let workspaces = get_workspaces(&stream);
+    let target_workspace = workspaces.iter()
+                            .filter(|x| x.output == target_output.name && x.visible)
+                            .next().unwrap();
+
+    // Move container to target workspace
+    let mut cmd: String = "move container to workspace ".to_string();
+    cmd.push_str(&target_workspace.name);
+    send_msg(&stream, RUN_COMMAND, &cmd);
+    check_success(&stream);
+
+    // Focus that workspace to follow the container
+    let mut cmd: String = "workspace ".to_string();
+    cmd.push_str(&target_workspace.name);
+    send_msg(&stream, RUN_COMMAND, &cmd);
+    check_success(&stream);
+}
+
 fn init_workspaces(stream: &UnixStream) {
     let outputs = get_outputs(&stream);
 
@@ -214,12 +254,14 @@ fn main() {
     let args: Vec<String> = env::args().map(|x| x.to_string())
                                        .collect();
 
-    let mut stream = get_stream();
+    let stream = get_stream();
 
     match args[1].as_str() {
         "init" => init_workspaces(&stream),
         "move" => move_container_to_workspace(&stream, &args[2]),
         "focus" => focus_to_workspace(&stream, &args[2]),
+        "next_output" => move_container_to_next_output(&stream),
+        "prev_output" => move_container_to_prev_output(&stream),
         _ => {},
     }
 }
