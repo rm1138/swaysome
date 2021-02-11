@@ -1,6 +1,5 @@
 // client.rs
 extern crate byteorder;
-extern crate serde;
 extern crate serde_json;
 
 use std::env;
@@ -11,8 +10,6 @@ use std::os::unix::net::UnixStream;
 use std::mem;
 use std::io::Cursor;
 
-use serde::{Deserialize, Serialize};
-
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 
 const RUN_COMMAND: u32 = 0;
@@ -20,49 +17,6 @@ const GET_WORKSPACES: u32 = 1;
 const SUBSCRIBE: u32 = 2;
 const GET_OUTPUTS: u32 = 3;
 
-#[derive(Debug)]
-#[derive(Serialize, Deserialize)]
-struct WorkspaceRect {
-    x: usize,
-    y: usize,
-}
-
-#[derive(Debug)]
-#[derive(Serialize, Deserialize)]
-struct Workspace {
-    num: usize,
-    name: String,
-    visible: bool,
-    focused: bool,
-    rect: WorkspaceRect,
-    output: String,
-}
-
-#[derive(Debug)]
-#[derive(Serialize, Deserialize)]
-struct OutputMode {
-    width: usize,
-    height: usize,
-    refresh: usize,
-}
-
-#[derive(Debug)]
-#[derive(Serialize, Deserialize)]
-struct Output {
-    name: String,
-    make: String,
-    model: String,
-    serial: String,
-    active: bool,
-    primary: bool,
-    focused: bool,
-    scale: f32,
-    subpixel_hinting: String,
-    transform: String,
-    current_workspace: String,
-    modes: Vec<OutputMode>,
-    current_mode: OutputMode,
-}
 
 
 fn get_stream() -> UnixStream {
@@ -146,7 +100,7 @@ fn check_success(stream: &UnixStream) {
     };
 }
 
-fn get_outputs(stream: &UnixStream) -> Vec<Output> {
+fn get_outputs(stream: &UnixStream) -> Vec<serde_json::Value> {
     send_msg(&stream, GET_OUTPUTS, "");
     let o = match read_msg(&stream) {
         Ok(msg) => msg,
@@ -155,7 +109,7 @@ fn get_outputs(stream: &UnixStream) -> Vec<Output> {
     serde_json::from_str(&o).unwrap()
 }
 
-fn get_workspaces(stream: &UnixStream) -> Vec<Workspace> {
+fn get_workspaces(stream: &UnixStream) -> Vec<serde_json::Value> {
     send_msg(&stream, GET_WORKSPACES, "");
     let ws = match read_msg(&stream) {
         Ok(msg) => msg,
@@ -167,7 +121,7 @@ fn get_workspaces(stream: &UnixStream) -> Vec<Workspace> {
 fn get_current_output_name(stream: &UnixStream) -> String {
     let outputs = get_outputs(&stream);
 
-    let focused_output_index = match outputs.iter().position(|x| x.focused) {
+    let focused_output_index = match outputs.iter().position(|x| x["focused"] == serde_json::Value::Bool(true)) {
         Some(i) => i,
         None => panic!("WTF! No focused output???"),
     };
@@ -205,7 +159,7 @@ fn move_container_to_prev_output(stream: &UnixStream) {
 
 fn move_container_to_next_or_prev_output(stream: &UnixStream, go_to_prev: bool) {
     let outputs = get_outputs(&stream);
-    let focused_output_index = match outputs.iter().position(|x| x.focused) {
+    let focused_output_index = match outputs.iter().position(|x| x["focused"] == serde_json::Value::Bool(true)) {
         Some(i) => i,
         None => panic!("WTF! No focused output???"),
     };
@@ -219,18 +173,18 @@ fn move_container_to_next_or_prev_output(stream: &UnixStream, go_to_prev: bool) 
 
     let workspaces = get_workspaces(&stream);
     let target_workspace = workspaces.iter()
-                            .filter(|x| x.output == target_output.name && x.visible)
+                            .filter(|x| x["output"] == target_output["name"] && x["visible"] == serde_json::Value::Bool(true))
                             .next().unwrap();
 
     // Move container to target workspace
     let mut cmd: String = "move container to workspace ".to_string();
-    cmd.push_str(&target_workspace.name);
+    cmd.push_str(&target_workspace["name"].as_str().unwrap());
     send_msg(&stream, RUN_COMMAND, &cmd);
     check_success(&stream);
 
     // Focus that workspace to follow the container
     let mut cmd: String = "workspace ".to_string();
-    cmd.push_str(&target_workspace.name);
+    cmd.push_str(&target_workspace["name"].as_str().unwrap());
     send_msg(&stream, RUN_COMMAND, &cmd);
     check_success(&stream);
 }
@@ -241,7 +195,7 @@ fn init_workspaces(stream: &UnixStream) {
     let cmd_prefix: String = "focus output ".to_string();
     for output in outputs.iter().rev() {
         let mut cmd = cmd_prefix.clone();
-        cmd.push_str(&output.name);
+        cmd.push_str(&output["name"].as_str().unwrap());
         println!("Sending command: '{}'", &cmd);
         send_msg(&stream, RUN_COMMAND, &cmd);
         check_success(&stream);
