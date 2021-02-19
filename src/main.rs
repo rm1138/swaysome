@@ -118,7 +118,7 @@ fn get_workspaces(stream: &UnixStream) -> Vec<serde_json::Value> {
     serde_json::from_str(&ws).unwrap()
 }
 
-fn get_current_output_name(stream: &UnixStream) -> String {
+fn get_current_output_index(stream: &UnixStream) -> String {
     let outputs = get_outputs(&stream);
 
     let focused_output_index = match outputs.iter().position(|x| x["focused"] == serde_json::Value::Bool(true)) {
@@ -131,7 +131,7 @@ fn get_current_output_name(stream: &UnixStream) -> String {
 
 fn move_container_to_workspace(stream: &UnixStream, workspace_name: &String) {
     let mut cmd: String = "move container to workspace ".to_string();
-    let output = get_current_output_name(stream);
+    let output = get_current_output_index(stream);
     cmd.push_str(&output);
     cmd.push_str(&workspace_name);
     println!("Sending command: '{}'", &cmd);
@@ -141,7 +141,7 @@ fn move_container_to_workspace(stream: &UnixStream, workspace_name: &String) {
 
 fn focus_to_workspace(stream: &UnixStream, workspace_name: &String) {
     let mut cmd: String = "workspace ".to_string();
-    let output = get_current_output_name(stream);
+    let output = get_current_output_index(stream);
     cmd.push_str(&output);
     cmd.push_str(&workspace_name);
     println!("Sending command: '{}'", &cmd);
