@@ -129,6 +129,17 @@ fn get_current_output_index(stream: &UnixStream) -> String {
     format!("{}", focused_output_index)
 }
 
+fn get_current_output_name(stream: &UnixStream) -> String {
+    let outputs = get_outputs(&stream);
+
+    let focused_output_index = match outputs.iter().find(|x| x["focused"] == serde_json::Value::Bool(true)) {
+        Some(i) => i["name"].as_str().unwrap(),
+        None => panic!("WTF! No focused output???"),
+    };
+
+    format!("{}", focused_output_index)
+}
+
 fn move_container_to_workspace(stream: &UnixStream, workspace_name: &String) {
     let mut cmd: String = "move container to workspace ".to_string();
     let output = get_current_output_index(stream);
@@ -144,6 +155,30 @@ fn focus_to_workspace(stream: &UnixStream, workspace_name: &String) {
     let output = get_current_output_index(stream);
     cmd.push_str(&output);
     cmd.push_str(&workspace_name);
+    println!("Sending command: '{}'", &cmd);
+    send_msg(&stream, RUN_COMMAND, &cmd);
+    check_success(&stream);
+}
+
+fn focus_all_outputs_to_workspace(stream: &UnixStream, workspace_name: &String) {
+    let current_output = get_current_output_name(stream);
+    println!("Current output name: {}", current_output);
+
+    // Iterate on all outputs to focus on the given workspace
+    let outputs = get_outputs(&stream);
+    for output in outputs.iter() {
+        let mut cmd: String = "focus output ".to_string();
+        cmd.push_str(&output["name"].as_str().unwrap());
+        println!("Sending command: '{}'", &cmd);
+        send_msg(&stream, RUN_COMMAND, &cmd);
+        check_success(&stream);
+
+        focus_to_workspace(&stream, &workspace_name);
+    }
+
+    // Get back to currently focused output
+    let mut cmd: String = "focus output ".to_string();
+    cmd.push_str(&current_output);
     println!("Sending command: '{}'", &cmd);
     send_msg(&stream, RUN_COMMAND, &cmd);
     check_success(&stream);
@@ -214,6 +249,7 @@ fn main() {
         "init" => init_workspaces(&stream),
         "move" => move_container_to_workspace(&stream, &args[2]),
         "focus" => focus_to_workspace(&stream, &args[2]),
+        "focus_all_outputs" => focus_all_outputs_to_workspace(&stream, &args[2]),
         "next_output" => move_container_to_next_output(&stream),
         "prev_output" => move_container_to_prev_output(&stream),
         _ => {},
