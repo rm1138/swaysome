@@ -84,3 +84,14 @@ one, both accessible with shortcut `$mod+1`.
 The `init` command simply walks through every screen to initialize a prefixed
 workspace. It does it backwards so that you end-up focused on the first screen,
 as usual.
+
+
+## Exhaustive swaysome commands list
+
+* `move [name]`: move the focused container to `[name]`
+* `next_output`: move the focused container to the next output
+* `prev_output`: move the focused container to the previous output
+* `focus [name]`: change focus to `[name]`
+* `focus_all_outputs [name]`: change all outputs focus to `[name]`
+* `init [name]`: cycle all outputs to create a default workspace with name `[name]`
+
