@@ -69,7 +69,7 @@ bindsym $mod+o exec "swaysome next_output"
 bindsym $mod+Shift+o exec "swaysome prev_output"
 
 # Init workspaces for every screen
-exec "swaysome init"
+exec "swaysome init 1"
 ```
 
 Finally append your `sway` configuration with this:

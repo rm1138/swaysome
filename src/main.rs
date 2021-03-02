@@ -224,7 +224,7 @@ fn move_container_to_next_or_prev_output(stream: &UnixStream, go_to_prev: bool) 
     check_success(&stream);
 }
 
-fn init_workspaces(stream: &UnixStream) {
+fn init_workspaces(stream: &UnixStream, workspace_name: &String) {
     let outputs = get_outputs(&stream);
 
     let cmd_prefix: String = "focus output ".to_string();
@@ -234,7 +234,7 @@ fn init_workspaces(stream: &UnixStream) {
         println!("Sending command: '{}'", &cmd);
         send_msg(&stream, RUN_COMMAND, &cmd);
         check_success(&stream);
-        focus_to_workspace(&stream, &"1".to_string());
+        focus_to_workspace(&stream, &workspace_name);
     }
 }
 
@@ -246,7 +246,7 @@ fn main() {
     let stream = get_stream();
 
     match args[1].as_str() {
-        "init" => init_workspaces(&stream),
+        "init" => init_workspaces(&stream, &args[2]),
         "move" => move_container_to_workspace(&stream, &args[2]),
         "focus" => focus_to_workspace(&stream, &args[2]),
         "focus_all_outputs" => focus_all_outputs_to_workspace(&stream, &args[2]),
