@@ -47,6 +47,14 @@ fn focus_to_workspace(stream: &UnixStream, workspace_pos: &String) {
     check_success(&stream);
 }
 
+fn init_workspace(stream: &UnixStream, output: String, workspace: &String) {
+    let mut cmd: String = "workspace ".to_string();
+    cmd.push_str(&fmt_output_workspace(&output, &workspace));
+    println!("Sending command: '{}'", &cmd);
+    send_msg(&stream, RUN_COMMAND, &cmd);
+    check_success(&stream);
+}
+
 fn focus_all_outputs_to_workspace(stream: &UnixStream, workspace_name: &String) {
     let current_output = get_current_output_name(stream);
     println!("Current output name: {}", current_output);
@@ -71,7 +79,47 @@ fn focus_all_outputs_to_workspace(stream: &UnixStream, workspace_name: &String) 
     check_success(&stream);
 }
 
-fn balance(stream: &UnixStream) {}
+fn normalize_workspace_name(stream: &UnixStream) {
+    let workspaces = get_workspaces(stream);
+    let outputs = get_outputs(stream);
+    let mut rename_to_temp: Vec<String> = Vec::new();
+    let mut rename_from_temp: Vec<String> = Vec::new();
+
+    outputs.iter().enumerate().for_each(|(output_idx, output)| {
+        workspaces
+            .iter()
+            .filter(|workspace| {
+                workspace["output"].as_str().unwrap() == output["name"].as_str().unwrap()
+            })
+            .enumerate()
+            .for_each(|(workspace_idx, workspace)| {
+                let old_name = &workspace["name"].as_str().unwrap();
+                let new_name = &fmt_output_workspace(
+                    &format!("{}", output_idx),
+                    &format!("{}", workspace_idx + 1),
+                );
+                let cmd_to_temp = format!(
+                    "rename workspace \"{}\" to \"temp-{}\" ",
+                    old_name, new_name
+                );
+                let cmd_from_temp = format!(
+                    "rename workspace \"temp-{}\" to \"{}\" ",
+                    new_name, new_name
+                );
+                rename_to_temp.push(cmd_to_temp);
+                rename_from_temp.push(cmd_from_temp);
+            })
+    });
+
+    rename_to_temp.iter().for_each(|cmd| {
+        send_msg(&stream, RUN_COMMAND, &cmd);
+        check_success(&stream);
+    });
+    rename_from_temp.iter().for_each(|cmd| {
+        send_msg(&stream, RUN_COMMAND, &cmd);
+        check_success(&stream);
+    })
+}
 
 fn move_container_to_next_output(stream: &UnixStream) {
     move_container_to_next_or_prev_output(&stream, false);
@@ -114,17 +162,19 @@ fn move_container_to_next_or_prev_output(stream: &UnixStream, go_to_prev: bool) 
 }
 
 fn init_workspaces(stream: &UnixStream, workspace_name: &String) {
-    let outputs = get_outputs(&stream);
-
     let cmd_prefix: String = "focus output ".to_string();
-    for output in outputs.iter().rev() {
-        let mut cmd = cmd_prefix.clone();
-        cmd.push_str(&output["name"].as_str().unwrap());
-        println!("Sending command: '{}'", &cmd);
-        send_msg(&stream, RUN_COMMAND, &cmd);
-        check_success(&stream);
-        focus_to_workspace(&stream, &workspace_name);
-    }
+    get_outputs(&stream)
+        .iter()
+        .enumerate()
+        .rev()
+        .for_each(|(i, output)| {
+            let mut cmd = cmd_prefix.clone();
+            cmd.push_str(&output["name"].as_str().unwrap());
+            println!("Sending command: '{}'", &cmd);
+            send_msg(&stream, RUN_COMMAND, &cmd);
+            check_success(&stream);
+            init_workspace(stream, format!("{}", i), workspace_name);
+        });
 }
 
 fn main() {
@@ -140,7 +190,7 @@ fn main() {
         "focus_all_outputs" => focus_all_outputs_to_workspace(&stream, &args[2]),
         "next_output" => move_container_to_next_output(&stream),
         "prev_output" => move_container_to_prev_output(&stream),
-        "balance" => balance(&stream),
+        "normalize_workspaces_name" => normalize_workspace_name(&stream),
         _ => {}
     }
 }

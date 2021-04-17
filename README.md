@@ -68,6 +68,9 @@ bindsym $mod+o exec "swaysome next_output"
 # Move focused container to previous output
 bindsym $mod+Shift+o exec "swaysome prev_output"
 
+# Normalize workspace name
+bindsym $mod+n exec "swaysome normalize_workspaces_name"
+
 # Init workspaces for every screen
 exec "swaysome init 1"
 ```
@@ -94,4 +97,5 @@ as usual.
 * `focus [name]`: change focus to `[name]`
 * `focus_all_outputs [name]`: change all outputs focus to `[name]`
 * `init [name]`: cycle all outputs to create a default workspace with name `[name]`
+* `normalize_workspaces_name`: rename all workspaces by it output and position. Useful when connected/disconnected external monitor
 

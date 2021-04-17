@@ -122,7 +122,7 @@ pub fn get_current_output_name(stream: &UnixStream) -> String {
     format!("{}", focused_output_index)
 }
 
-fn fmt_output_workspace(output: &str, workspace: &str) -> String {
+pub fn fmt_output_workspace(output: &str, workspace: &str) -> String {
     format!("{}-{}", output, workspace)
 }
 
