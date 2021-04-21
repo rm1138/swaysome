@@ -131,18 +131,19 @@ pub fn get_workspace_by_position(stream: &UnixStream, workspace_pos: &String) ->
     let output_idx = get_current_output_index(stream);
     let workspaces = get_workspaces(&stream);
 
-    let target_workspace = workspaces
-        .iter()
-        .filter(|x| {
-            println!("{}", x["output"]);
-            x["output"] == output
-        })
-        .enumerate()
-        .filter(|(i, _)| &(i + 1).to_string() == workspace_pos)
-        .next();
+    // let target_workspace = workspaces
+    //     .iter()
+    //     .filter(|x| {
+    //         println!("{}", x["output"]);
+    //         x["output"] == output
+    //     })
+    //     .enumerate()
+    //     .filter(|(i, _)| &(i + 1).to_string() == workspace_pos)
+    //     .next();
 
-    match target_workspace {
-        Some((_, w)) => w["name"].as_str().unwrap().to_string(),
-        _ => fmt_output_workspace(&output_idx.to_string(), &workspace_pos),
-    }
+    // match target_workspace {
+        // Some((_, w)) => w["name"].as_str().unwrap().to_string(),
+        // _ => 
+    fmt_output_workspace(&output_idx.to_string(), &workspace_pos)
+    // }
 }
