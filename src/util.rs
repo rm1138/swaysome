@@ -1,6 +1,7 @@
 extern crate byteorder;
 extern crate serde_json;
 
+use rand::Rng;
 use std::io::Cursor;
 use std::io::{Read, Write};
 use std::mem;
@@ -50,12 +51,12 @@ pub fn read_msg(mut stream: &UnixStream) -> Result<String, &str> {
         // let mut v = Cursor::new(vec!(response_header[6..10]));
         let payload_length = v.read_u32::<LittleEndian>().unwrap();
         // payload_length = response_header[6..10].read_u32::<LittleEndian>().unwrap();
-        println!("This is a valid i3 packet of length: {}", payload_length);
+        //println!("This is a valid i3 packet of length: {}", payload_length);
 
         let mut payload = vec![0; payload_length as usize];
         stream.read_exact(&mut payload[..]).unwrap();
         let payload_str = String::from_utf8(payload).unwrap();
-        println!("Payload: {}", payload_str);
+        //println!("Payload: {}", payload_str);
         Ok(payload_str)
     } else {
         print!("Not an i3-icp packet, emptying the buffer: ");
@@ -123,13 +124,16 @@ pub fn get_current_output_name(stream: &UnixStream) -> String {
 }
 
 pub fn fmt_output_workspace(output: &str, workspace: &str) -> String {
-    format!("{}-{}", output, workspace)
+    let mut rng = rand::thread_rng();
+    let new_idx = rng.gen::<u8>().to_string();
+    format!("{}-{}-{}", output, workspace, new_idx)
 }
 
 pub fn get_workspace_by_position(stream: &UnixStream, workspace_pos: &String) -> String {
     let output = get_current_output_name(stream);
     let output_idx = get_current_output_index(stream);
     let mut workspaces = get_workspaces(&stream);
+    let next_idx = (workspaces.len() + 1).to_string();
 
     workspaces.sort_by(|a, b| {
         a["name"]
@@ -148,6 +152,6 @@ pub fn get_workspace_by_position(stream: &UnixStream, workspace_pos: &String) ->
 
     match target_workspace {
         Some((_, w)) => w["name"].as_str().unwrap().to_string(),
-        _ => fmt_output_workspace(&output_idx.to_string(), &workspace_pos),
+        _ => fmt_output_workspace(&output_idx.to_string(), &next_idx),
     }
 }
