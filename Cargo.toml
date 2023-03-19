@@ -1,12 +1,11 @@
 [package]
-name = "swaysome"
+name = "hyprsome"
 version = "1.0.0"
-authors = ["Skia <skia@hya.sk>"]
+authors = ["Ricky <rm1138@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 byteorder = "1"
 serde_json = "1"
 rand = "0.8"
+hyprland = "0.3.0"

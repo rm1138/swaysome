@@ -6,45 +6,55 @@ extern crate serde_json;
 
 use std::env;
 use std::os::unix::net::UnixStream;
-use std::path::Path;
-use std::process::exit;
+
+use hyprland::data::Monitors;
+use hyprland::data::Workspace;
+use hyprland::data::Workspaces;
+use hyprland::dispatch::*;
+use hyprland::shared::HyprData;
 
 use crate::command::*;
 use crate::util::*;
 
-fn get_stream() -> UnixStream {
-    let socket_path = match env::var("I3SOCK") {
-        Ok(val) => val,
-        Err(_e) => {
-            println!("couldn't find i3/sway socket");
-            exit(1);
-        }
+fn move_container_to_workspace(workspace_pos: usize) {
+    let monitor = Monitors::get().unwrap().find(|it| it.focused).unwrap();
+    let workspaces: Vec<Workspace> = Workspaces::get()
+        .unwrap()
+        .filter(|it| it.monitor == monitor.name)
+        .collect();
+
+    let target = if workspace_pos <= workspaces.len() {
+        workspaces.get(workspace_pos - 1).unwrap().name.clone()
+    } else {
+        // new workspace
+        fmt_output_workspace(&monitor.name, &workspace_pos.to_string())
     };
 
-    let socket = Path::new(&socket_path);
-
-    // Connect to socket
-    match UnixStream::connect(&socket) {
-        Err(_) => panic!("couldn't connect to i3/sway socket"),
-        Ok(stream) => stream,
-    }
+    Dispatch::call(DispatchType::MoveToWorkspaceSilent(
+        WorkspaceIdentifier::Name(&target),
+        None,
+    ))
+    .unwrap();
 }
 
-fn move_container_to_workspace(stream: &UnixStream, workspace_pos: &String) {
-    let mut cmd: String = "move container to workspace ".to_string();
-    let workspace = get_workspace_by_position(stream, workspace_pos);
-    cmd.push_str(&workspace);
-    send_msg(&stream, RUN_COMMAND, &cmd);
-    check_success(&stream);
-}
+fn focus_to_workspace(workspace_pos: usize) {
+    let monitor = Monitors::get().unwrap().find(|it| it.focused).unwrap();
+    let workspaces: Vec<Workspace> = Workspaces::get()
+        .unwrap()
+        .filter(|it| it.monitor == monitor.name)
+        .collect();
 
-fn focus_to_workspace(stream: &UnixStream, workspace_pos: &String) {
-    let mut cmd: String = "workspace ".to_string();
-    let workspace = get_workspace_by_position(stream, workspace_pos);
-    cmd.push_str(&workspace);
-    println!("Sending command: '{}'", &cmd);
-    send_msg(&stream, RUN_COMMAND, &cmd);
-    check_success(&stream);
+    let target = if workspace_pos <= workspaces.len() {
+        workspaces.get(workspace_pos - 1).unwrap().name.clone()
+    } else {
+        // new workspace
+        fmt_output_workspace(&monitor.name, &workspace_pos.to_string())
+    };
+
+    Dispatch::call(DispatchType::Workspace(
+        WorkspaceIdentifierWithSpecial::Name(&target),
+    ))
+    .unwrap();
 }
 
 fn init_workspace(stream: &UnixStream, output: String, workspace: &String) {
@@ -68,7 +78,7 @@ fn focus_all_outputs_to_workspace(stream: &UnixStream, workspace_name: &String) 
         send_msg(&stream, RUN_COMMAND, &cmd);
         check_success(&stream);
 
-        focus_to_workspace(&stream, &workspace_name);
+        //focus_to_workspace(&stream, &workspace_name);
     }
 
     // Get back to currently focused output
@@ -181,16 +191,11 @@ fn main() {
     // `args` returns the arguments passed to the program
     let args: Vec<String> = env::args().map(|x| x.to_string()).collect();
 
-    let stream = get_stream();
-
     match args[1].as_str() {
-        "init" => init_workspaces(&stream, &args[2]),
-        "move" => move_container_to_workspace(&stream, &args[2]),
-        "focus" => focus_to_workspace(&stream, &args[2]),
-        "focus_all_outputs" => focus_all_outputs_to_workspace(&stream, &args[2]),
-        "next_output" => move_container_to_next_output(&stream),
-        "prev_output" => move_container_to_prev_output(&stream),
-        "normalize_workspaces_name" => normalize_workspace_name(&stream),
+        //"init" => init_workspaces(&stream, &args[2]),
+        "move" => move_container_to_workspace(args[2].parse().unwrap()),
+        "focus" => focus_to_workspace(args[2].parse().unwrap()),
+        //"normalize_workspaces_name" => normalize_workspace_name(&stream),
         _ => {}
     }
 }

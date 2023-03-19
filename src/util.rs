@@ -139,7 +139,7 @@ pub fn get_workspace_by_position(stream: &UnixStream, workspace_pos: &String) ->
         a["name"]
             .as_str()
             .unwrap()
-            .partial_cmp(&b["name"].as_str().unwrap())
+            .partial_cmp(b["name"].as_str().unwrap())
             .unwrap()
     });
 
