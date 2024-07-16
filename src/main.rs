@@ -1,5 +1,6 @@
 mod util;
 
+use std::cmp::Ordering;
 use std::env;
 
 use hyprland::data::Monitors;
@@ -52,11 +53,10 @@ fn focus_to_workspace(workspace_pos: usize) {
         .filter(|it| it.monitor == monitor.name)
         .collect();
 
-    let target_workspace = workspaces.iter().find(|workspace| {
-        workspace
-            .name
-            .starts_with(&format!("{}:{}", workspace.monitor, workspace_pos))
-    });
+    let target_name = format!("{}:{}", monitor.name, workspace_pos);
+    let target_workspace = workspaces
+        .iter()
+        .find(|workspace| workspace.name.starts_with(&target_name));
 
     if let Some(target_workspace) = target_workspace {
         // pos is active, focus to previous
@@ -90,11 +90,13 @@ fn nomalize_workspace_name() {
         .into_iter()
         .find(|it| it.focused)
         .unwrap();
-    let workspaces: Vec<Workspace> = Workspaces::get()
+    let mut workspaces: Vec<Workspace> = Workspaces::get()
         .unwrap()
         .into_iter()
         .filter(|it| it.monitor == monitor.name)
         .collect();
+
+    workspaces.sort_by(|a, b| a.id.cmp(&b.id));
 
     workspaces.iter().enumerate().for_each(|(idx, workspace)| {
         let name = fmt_output_workspace(&workspace.monitor, &format!("{}", idx + 1));
