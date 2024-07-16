@@ -11,9 +11,14 @@ use hyprland::shared::HyprData;
 use crate::util::*;
 
 fn move_container_to_workspace(workspace_pos: usize) {
-    let monitor = Monitors::get().unwrap().find(|it| it.focused).unwrap();
+    let monitor = Monitors::get()
+        .unwrap()
+        .into_iter()
+        .find(|it| it.focused)
+        .unwrap();
     let workspaces: Vec<Workspace> = Workspaces::get()
         .unwrap()
+        .into_iter()
         .filter(|it| it.monitor == monitor.name)
         .collect();
 
@@ -29,16 +34,21 @@ fn move_container_to_workspace(workspace_pos: usize) {
     };
 
     Dispatch::call(DispatchType::MoveToWorkspaceSilent(
-        WorkspaceIdentifier::Name(&target),
+        WorkspaceIdentifierWithSpecial::Name(&target),
         None,
     ))
     .unwrap();
 }
 
 fn focus_to_workspace(workspace_pos: usize) {
-    let monitor = Monitors::get().unwrap().find(|it| it.focused).unwrap();
+    let monitor = Monitors::get()
+        .unwrap()
+        .into_iter()
+        .find(|it| it.focused)
+        .unwrap();
     let workspaces: Vec<Workspace> = Workspaces::get()
         .unwrap()
+        .into_iter()
         .filter(|it| it.monitor == monitor.name)
         .collect();
 
@@ -75,9 +85,14 @@ fn focus_to_workspace(workspace_pos: usize) {
 }
 
 fn nomalize_workspace_name() {
-    let monitor = Monitors::get().unwrap().find(|it| it.focused).unwrap();
+    let monitor = Monitors::get()
+        .unwrap()
+        .into_iter()
+        .find(|it| it.focused)
+        .unwrap();
     let workspaces: Vec<Workspace> = Workspaces::get()
         .unwrap()
+        .into_iter()
         .filter(|it| it.monitor == monitor.name)
         .collect();
 
